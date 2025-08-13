@@ -10,9 +10,17 @@
     main { max-width:960px; margin:2rem auto; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.06) }
     h1 { margin:0 0 .25rem 0 }
     .tag { background:#fff2; padding:.25rem .5rem; border-radius:6px; font-size:.9rem }
+
+    section { margin-top:2rem; }
+    label { display:block; margin:.5rem 0 .25rem }
+    input { padding:.4rem; width:100%; max-width:300px }
+    button { margin-top:.5rem; padding:.5rem 1rem; background:#0055a5; color:#fff; border:none; border-radius:6px; cursor:pointer }
+    pre { background:#f8fafc; padding:1rem; border:1px solid #ddd; overflow-x:auto; }
+
     .grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); margin-top:1.5rem }
     .card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:1rem }
     a.button { display:inline-block; margin-top:1rem; background:#0055a5; color:#fff; padding:.6rem .9rem; border-radius:8px; text-decoration:none }
+
     footer { text-align:center; color:#667; padding:2rem 1rem }
   </style>
 </head>
@@ -23,6 +31,29 @@
   </header>
   <main>
     <p>Este site serve de interface pública. A API será consumida a partir do front-end.</p>
+
+
+    <section>
+      <h2>Teste de Ligação</h2>
+      <button onclick="ping()">Ping API</button>
+      <pre id="pingOut"></pre>
+    </section>
+
+    <section>
+      <h2>Autenticação</h2>
+      <label>Email:</label>
+      <input id="email" type="email" />
+      <label>Palavra-passe:</label>
+      <input id="password" type="password" />
+      <button onclick="login()">Entrar</button>
+      <div id="authMsg"></div>
+    </section>
+
+    <section>
+      <h2>Pedidos</h2>
+      <button onclick="loadPedidos()">Carregar Pedidos</button>
+      <pre id="pedidosOut"></pre>
+    </section>
 
     <div class="grid">
       <div class="card">
@@ -44,9 +75,74 @@
     </div>
 
     <a class="button" href="#" onclick="alert('Em breve: formulário de submissão')">Começar</a>
+
   </main>
   <footer>
     <small>&copy; 2025 Gestão de Estágios</small>
   </footer>
+
+
+<script>
+  // 🔹 Troca para o endereço público da tua API
+  const API_URL = "const API_URL = "https://meu-servidor.dominio.com";
+
+  function setToken(token) { sessionStorage.setItem('token', token); }
+  function getToken() { return sessionStorage.getItem('token'); }
+  function authHeader() {
+    const t = getToken();
+    return t ? { 'Authorization': `Bearer ${t}` } : {};
+  }
+
+  async function ping() {
+    const out = document.getElementById('pingOut');
+    out.textContent = 'A contactar API...';
+    try {
+      const r = await fetch(`${API_URL}/ping`);
+      const j = await r.json();
+      out.textContent = JSON.stringify(j, null, 2);
+    } catch (e) {
+      out.textContent = 'Erro: ' + e;
+    }
+  }
+
+  async function login() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const msg = document.getElementById('authMsg');
+    msg.textContent = 'A autenticar...';
+    try {
+      const r = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!r.ok) {
+        msg.textContent = `Falha: ${r.status} ${await r.text()}`;
+        return;
+      }
+      const data = await r.json();
+      setToken(data.token);
+      msg.textContent = 'Autenticado com sucesso.';
+    } catch (e) {
+      msg.textContent = 'Erro: ' + e;
+    }
+  }
+
+  async function loadPedidos() {
+    const out = document.getElementById('pedidosOut');
+    out.textContent = 'A carregar...';
+    try {
+      const r = await fetch(`${API_URL}/pedidos`, { headers: { ...authHeader() } });
+      if (r.status === 401) {
+        out.textContent = 'Não autenticado. Faz login primeiro.';
+        return;
+      }
+      const j = await r.json();
+      out.textContent = JSON.stringify(j, null, 2);
+    } catch (e) {
+      out.textContent = 'Erro: ' + e;
+    }
+  }
+</script>
 </body>
 </html>
